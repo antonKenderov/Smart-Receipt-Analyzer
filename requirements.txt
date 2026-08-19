@@ -1,0 +1,2 @@
+easyocr
+pdf2image
