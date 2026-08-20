@@ -1,0 +1,42 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-receipts}:${POSTGRES_PASSWORD:-receipts}@db:5432/${POSTGRES_DB:-receipts}
+    volumes:
+      - ./app:/app/app
+      - ./samples:/app/samples
+      - ./output:/app/output
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-receipts}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-receipts}
+      POSTGRES_DB: ${POSTGRES_DB:-receipts}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U ${POSTGRES_USER:-receipts} -d ${POSTGRES_DB:-receipts}
+          && psql -U ${POSTGRES_USER:-receipts} -d ${POSTGRES_DB:-receipts} -c 'SELECT 1' > /dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
