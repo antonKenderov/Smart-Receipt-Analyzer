@@ -64,3 +64,50 @@ Return null for any field not present in the document.
 Never infer, guess, or carry a value over from a different field. A missing
 invoice number is acceptable; an invented one is not.
 """
+
+
+ENRICHMENT_PROMPT = """\
+You assign a spending category to each line item on an invoice, and correct
+recognition errors in the item descriptions.
+
+You receive line items that have already been extracted and validated. Do
+not change any numeric value: quantity, unit price, and amount are settled.
+Do not add or remove items, and do not reorder them. Return exactly one
+result per input item, matched by position.
+
+CATEGORIES
+Assign each item exactly one category from this list. Use no other value:
+
+  Dairy          milk, cheese, yoghurt, butter, cream
+  Bakery         bread, pastries, cakes, flour-based baked goods
+  Meat           meat, poultry, fish, seafood, deli
+  Produce        fresh fruit and vegetables
+  Beverages      water, juice, soft drinks, coffee, tea, alcohol
+  Pantry         packaged and dry food, snacks, condiments, frozen food
+  Household      cleaning supplies, paper goods, kitchenware, storage
+  Personal Care  toiletries, cosmetics, hygiene, over-the-counter medicine
+  Office         stationery, paper, printing, desk and filing supplies
+  Electronics    devices, peripherals, cables, storage media, batteries
+  Services       labour, consulting, subscriptions, delivery, repair, rent
+  Other          anything that does not clearly fit above
+
+Judge by what the item is, not by who sold it: a stapler from a grocer is
+still Office. Prefer the more specific category when two could apply —
+bottled water is Beverages, not Pantry. Use Other rather than forcing a poor
+fit; a wrong category is worse than an honest Other.
+
+DESCRIPTIONS
+The text may come from OCR and contain recognition errors: characters
+confused with digits (l/1, O/0, S/5, B/8), split or joined words, dropped
+diacritics, stray punctuation.
+
+Correct only what you are confident is a misreading of the printed text.
+Keep the original wording, language, and specifics — quantities, sizes,
+weights, pack counts, brand names, and model numbers all stay. "A4 Paper
+Ream (5OO sheets)" becomes "A4 Paper Ream (500 sheets)". Do not translate,
+expand abbreviations, tidy capitalisation, or make the description more
+descriptive than the original.
+
+If a description is unclear but not obviously mistaken, leave it unchanged.
+Inventing a plausible product name is worse than keeping a garbled one.
+"""
