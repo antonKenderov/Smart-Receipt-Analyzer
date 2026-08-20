@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 
 MIN_CHARS_PER_PAGE = 100
 
+# Costs ~1.5x the tokens of layout=False, and buys the horizontal
+# alignment that keeps the issuer block apart from the receiver block -
+# without it the two columns of the header merge into single lines.
+USE_LAYOUT = True
+
 
 def has_usable_text_layer(text: str, page_count: int) -> bool:
     if page_count <= 0:
@@ -38,9 +43,7 @@ def extract_text(pdf_path: Path) -> ExtractionResult:
     path = info.path
     warnings: list[str] = []
 
-    # layout=True keeps the horizontal alignment that separates the
-    # issuer block from the receiver block; see CLAUDE.md.
-    text, page_count = extract_text_layer(path, layout=True)
+    text, page_count = extract_text_layer(path, layout=USE_LAYOUT)
 
     if has_usable_text_layer(text, page_count):
         logger.info("'%s': using embedded text layer", path.name)
