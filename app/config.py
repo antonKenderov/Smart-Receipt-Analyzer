@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr, model_validator
@@ -12,6 +13,7 @@ class Settings(BaseSettings):
     max_file_size_mb: int = 20
     max_pages: int = 10
     ocr_dpi: int = 200
+    output_dir: Path = Path("output")
 
     model_config = SettingsConfigDict(
         env_file=".env",
