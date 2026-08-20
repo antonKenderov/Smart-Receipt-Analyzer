@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.domain.models import ExtractionMethod
+from app.domain.extraction import ExtractionMethod
 from app.extraction.extractor import (
     MIN_CHARS_PER_PAGE,
     USE_LAYOUT,
