@@ -3,6 +3,12 @@ from pathlib import Path
 
 import pdfplumber
 
+from app.services.errors import (
+    EmptyDocumentError,
+    InvalidPDFError,
+    SourceNotFoundError,
+)
+
 logger = logging.getLogger(__name__)
 
 MIN_TABLE_ROWS = 2
@@ -12,10 +18,6 @@ MIN_TABLE_FILL = 0.5
 PAGE_MARKER = "--- PAGE {n} ---"
 TABLE_MARKER = "--- TABLE ---"
 CELL_SEPARATOR = " | "
-
-
-class ExtractionError(Exception):
-    pass
 
 
 def _is_useful(table: list[list[str | None]]) -> bool:
@@ -75,19 +77,19 @@ def extract_text_layer(
 ) -> tuple[str, int]:
     path = Path(pdf_path)
     if not path.is_file():
-        raise ExtractionError(f"File not found: {path}")
+        raise SourceNotFoundError("File not found", filename=path.name)
 
     try:
         pdf = pdfplumber.open(path)
     except Exception as e:
-        raise ExtractionError(f"Cannot open PDF '{path.name}': {e}") from e
+        raise InvalidPDFError(f"Cannot open PDF: {e}", filename=path.name) from e
 
     parts: list[str] = []
 
     with pdf:
         page_count = len(pdf.pages)
         if page_count == 0:
-            raise ExtractionError(f"PDF '{path.name}' has no pages")
+            raise EmptyDocumentError("PDF has no pages", filename=path.name)
 
         pages = pdf.pages[:max_pages] if max_pages else pdf.pages
 

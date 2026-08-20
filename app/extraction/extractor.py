@@ -4,12 +4,13 @@ from pathlib import Path
 from app.domain.models import ExtractionMethod, ExtractionResult
 from app.extraction.image_reader import images_reader
 from app.extraction.pdf_reader import pdf_to_images
-from app.extraction.text_layer import ExtractionError, extract_text_layer
+from app.extraction.text_layer import extract_text_layer
+from app.extraction.validation import PdfInfo, validate_pdf
+from app.services.errors import InvalidPDFError, NoTextFoundError
 
 logger = logging.getLogger(__name__)
 
 MIN_CHARS_PER_PAGE = 100
-MAX_PAGES = 10
 
 
 def has_usable_text_layer(text: str, page_count: int) -> bool:
@@ -18,30 +19,30 @@ def has_usable_text_layer(text: str, page_count: int) -> bool:
     return len(text.strip()) / page_count >= MIN_CHARS_PER_PAGE
 
 
-def _ocr(pdf_path: Path, pages_read: int) -> tuple[str, int]:
+def _ocr(info: PdfInfo) -> tuple[str, int]:
     try:
-        images = pdf_to_images(pdf_path, max_pages=pages_read)
+        images = pdf_to_images(info.path)
     except Exception as e:
-        raise ExtractionError(f"Cannot rasterise '{pdf_path.name}': {e}") from e
+        raise InvalidPDFError(
+            f"Cannot rasterise for OCR: {e}", filename=info.path.name
+        ) from e
 
     if not images:
-        raise ExtractionError(f"Rasterising '{pdf_path.name}' produced no pages")
+        raise InvalidPDFError("Rasterising produced no pages", filename=info.path.name)
 
     return images_reader(images)
 
 
 def extract_text(pdf_path: Path) -> ExtractionResult:
-    path = Path(pdf_path)
+    info = validate_pdf(pdf_path)
+    path = info.path
     warnings: list[str] = []
-    text, page_count = extract_text_layer(path, layout=True, max_pages=MAX_PAGES)
 
-    pages_read = min(page_count, MAX_PAGES)
-    if page_count > pages_read:
-        warnings.append(
-            f"Document has {page_count} pages, only the first {pages_read} were read"
-        )
+    # layout=True keeps the horizontal alignment that separates the
+    # issuer block from the receiver block; see CLAUDE.md.
+    text, page_count = extract_text_layer(path, layout=True)
 
-    if has_usable_text_layer(text, pages_read):
+    if has_usable_text_layer(text, page_count):
         logger.info("'%s': using embedded text layer", path.name)
         text = text.strip()
         return ExtractionResult(
@@ -52,7 +53,7 @@ def extract_text(pdf_path: Path) -> ExtractionResult:
             warnings=warnings,
         )
 
-    density = len(text.strip()) / pages_read if pages_read else 0.0
+    density = len(text.strip()) / page_count if page_count else 0.0
     logger.info(
         "'%s': text layer too thin (%.0f chars/page < %d), falling back to OCR",
         path.name,
@@ -64,11 +65,13 @@ def extract_text(pdf_path: Path) -> ExtractionResult:
         f"(below {MIN_CHARS_PER_PAGE}), fell back to OCR"
     )
 
-    text, dropped = _ocr(path, pages_read)
+    text, dropped = _ocr(info)
     text = text.strip()
 
     if not text:
-        raise ExtractionError(f"Neither text layer nor OCR found text in '{path.name}'")
+        raise NoTextFoundError(
+            "Neither the text layer nor OCR found any text", filename=path.name
+        )
 
     if dropped:
         warnings.append(f"OCR discarded {dropped} low-confidence fragments")
