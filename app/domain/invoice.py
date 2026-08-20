@@ -1,7 +1,11 @@
-from pydantic import BaseModel
-from datetime import date
+from pydantic import BaseModel, Field
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from uuid import UUID
+
+from app.domain.extraction import ExtractionMethod
+from app.domain.validation import ValidationIssue, ValidationStatus
 
 class Category(str, Enum):
     DAIRY = "Dairy"
@@ -51,3 +55,21 @@ class EnrichmentRow(BaseModel):
 
 class EnrichmentResponse(BaseModel):
     line_items: list[EnrichmentRow]
+
+class StoredReceipt(EnrichedInvoice):
+    """An invoice as it exists in the database.
+
+    Everything an EnrichedInvoice has, plus what processing and storage added:
+    identity, which extraction branch ran, what validation concluded, and the
+    provenance needed to recognise the same file again.
+    """
+
+    id: UUID
+    extraction_method: ExtractionMethod
+    validation_status: ValidationStatus
+    validation_issues: list[ValidationIssue] = Field(default_factory=list)
+    source_filename: str
+    file_hash: str
+    report_path: str | None = None
+    created_at: datetime
+    processed_at: datetime | None = None

@@ -19,7 +19,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.domain.extraction import ExtractionMethod
 from app.domain.invoice import Category
-from app.services.validation import ValidationStatus
+from app.domain.validation import ValidationStatus
 
 
 class LLMStage(str, Enum):
