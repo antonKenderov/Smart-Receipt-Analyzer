@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from app.domain.models import ExtractionMethod, ExtractionResult
+from app.domain.extraction import ExtractionMethod, ExtractionResult
 from app.extraction.image_reader import images_reader
 from app.extraction.pdf_reader import pdf_to_images
 from app.extraction.text_layer import extract_text_layer
