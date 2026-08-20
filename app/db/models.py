@@ -66,6 +66,7 @@ class Receipt(Base):
     tax_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     total_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     currency: Mapped[str | None] = mapped_column(CHAR(3))
+    summary: Mapped[str | None] = mapped_column(Text)
 
     extraction_method: Mapped[ExtractionMethod] = mapped_column(
         _enum_column(ExtractionMethod, "extraction_method")
@@ -142,3 +143,5 @@ class LLMCall(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
+
+    receipt: Mapped["Receipt"] = relationship(back_populates="llm_calls")

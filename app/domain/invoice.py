@@ -47,6 +47,7 @@ class EnrichedLineItem(LineItem):
 
 class EnrichedInvoice(Invoice):
     line_items: list[EnrichedLineItem]
+    summary: str | None = None
 
 class EnrichmentRow(BaseModel):
     position: int
@@ -55,15 +56,9 @@ class EnrichmentRow(BaseModel):
 
 class EnrichmentResponse(BaseModel):
     line_items: list[EnrichmentRow]
+    summary: str
 
 class StoredReceipt(EnrichedInvoice):
-    """An invoice as it exists in the database.
-
-    Everything an EnrichedInvoice has, plus what processing and storage added:
-    identity, which extraction branch ran, what validation concluded, and the
-    provenance needed to recognise the same file again.
-    """
-
     id: UUID
     extraction_method: ExtractionMethod
     validation_status: ValidationStatus

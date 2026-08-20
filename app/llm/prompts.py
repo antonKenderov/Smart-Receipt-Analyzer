@@ -110,4 +110,16 @@ descriptive than the original.
 
 If a description is unclear but not obviously mistaken, leave it unchanged.
 Inventing a plausible product name is worse than keeping a garbled one.
+
+SUMMARY
+Also write a brief summary of the spending: two or three sentences on what
+this invoice was actually for, based on the items and the categories you
+assigned. Name the dominant categories and say what kind of purchase this
+looks like - a stationery restock, a one-off equipment purchase, a weekly
+grocery shop.
+
+State no figures. No amounts, no totals, no percentages, no item counts. You
+have not been given the prices and must not guess at them; the report prints
+the computed totals in a table directly above this text. A summary that
+invents a number contradicts the table next to it.
 """
