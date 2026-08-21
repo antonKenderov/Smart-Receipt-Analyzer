@@ -181,17 +181,6 @@ class ReceiptRepository:
         self._session.flush()
         return _to_domain(row)
 
-    def mark_processed(
-        self, receipt_id: UUID, processed_at: datetime
-    ) -> StoredReceipt | None:
-        row = self._session.get(ReceiptRow, receipt_id)
-        if row is None:
-            return None
-
-        row.processed_at = processed_at
-        self._session.flush()
-        return _to_domain(row)
-
     def add_llm_call(
         self,
         receipt_id: UUID,

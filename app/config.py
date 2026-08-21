@@ -10,9 +10,6 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = 60
 
     database_url: str
-    max_file_size_mb: int = 20
-    max_pages: int = 10
-    ocr_dpi: int = 200
     output_dir: Path = Path("output")
 
     model_config = SettingsConfigDict(
