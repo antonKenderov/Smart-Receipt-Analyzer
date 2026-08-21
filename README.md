@@ -452,8 +452,22 @@ below is an observed value from `samples/7_scanned.pdf`, not an extrapolation:
 A corrupted leading digit moves the value by an order of magnitude. Raising the
 confidence floor cannot help: the lowest surviving fragment scores 0.308 against
 a 0.3 threshold, so a higher floor discards real prices before it discards
-errors. This is handled by the extraction prompt and detected by the arithmetic
-check, not fixed at the OCR stage.
+errors.
+
+**The amounts are handled; the currency label is not.** The extraction prompt
+recovers the figures and the arithmetic check confirms them — both scanned
+samples store 707.90 / 141.58 / 849.48, exactly matching the digital original.
+But `7_scanned.pdf` ends up recorded as `EUR` rather than `GBP`, because on that
+scan EasyOCR replaced `£` with `€` on nearly every line, so the model saw
+consistent and overwhelming evidence for the wrong currency. `8.pdf` is a
+different scan of the same invoice where the corruption fell differently, and
+it resolves correctly.
+
+Nothing downstream can catch this. The arithmetic reconciles perfectly, because
+every figure is right and only the label is wrong — a validation rule cannot
+distinguish 849.48 EUR from 849.48 GBP. Cross-checking the currency against the
+`GB` prefix on the VAT numbers would catch this specific case, and is the
+obvious next step.
 
 **The two-column header merges in the OCR branch.** On a skewed scan the issuer
 block on the left and the invoice metadata on the right fall inside the same
@@ -507,6 +521,59 @@ works. If it ever needs to be configurable, that signature is the place.
 
 Nine files, `samples/1.pdf` through `samples/8.pdf` plus `7_scanned.pdf`. All are
 single-page.
+
+### What each one actually produces
+
+Every sample below was uploaded through `POST /api/receipts` against a live
+model and an empty database. **All nine were accepted, stored and given a
+report** — nothing is rejected for being incomplete. What differs is how much
+of the invoice was there to find.
+
+The task's minimum is invoice number, date, issuer name and ID, receiver name
+and ID, at least eight line items with description/quantity/unit price/amount,
+total, and currency. Only four samples clear that bar:
+
+| File | Branch | Status | Items | Meets the 8-item minimum | What is missing or wrong |
+| --- | --- | --- | --- | --- | --- |
+| `6.pdf` | text layer | `clean` | 8 | yes | nothing |
+| `7.pdf` | text layer | `clean` | 9 | yes | nothing |
+| `8.pdf` | OCR | `clean` | 9 | yes | nothing |
+| `7_scanned.pdf` | OCR | `clean` | 9 | yes | currency stored as `EUR`, should be `GBP` |
+| `1.pdf` | text layer | `flagged` | 3 | no | issuer ID, receiver ID, subtotal, tax |
+| `2.pdf` | text layer | `inconsistent` | 1 | no | issuer ID, receiver ID, tax; line arithmetic and total do not reconcile |
+| `3.pdf` | text layer | `inconsistent` | 1 | no | issuer ID, receiver ID, tax; subtotal 200.00 against a total of 8193.00 |
+| `4.pdf` | text layer | `inconsistent` | 0 | no | no line items at all, plus both IDs, subtotal and tax |
+| `5.pdf` | text layer | `inconsistent` | 0 | no | no line items at all, plus both IDs, subtotal and tax |
+
+**The four clean ones are the demonstration.** `6.pdf`, `7.pdf` and `8.pdf`
+produce a fully populated receipt: every required field present, arithmetic
+reconciling, a category on every line, a summary, and a report. `7.pdf` and
+`8.pdf` are the same invoice digital-born and scanned, and reach identical
+figures through different branches.
+
+**`1.pdf` through `5.pdf` are thin documents, not failures of the pipeline.**
+They were collected as layout variety rather than as complete invoices —
+`4.pdf` and `5.pdf` are service-details forms with no line-item table for
+anything to find, and `3.pdf` is filler text with a subtotal that has no
+relationship to its total. The pipeline reports exactly that: `no_line_items`,
+`total_mismatch`, `missing_issuer_id`. They are stored with those findings
+attached rather than silently dropped, which is the whole point of validation
+flagging instead of rejecting.
+
+Note what the status buys. All five imperfect samples cost **one** LLM call
+each, not two: an `inconsistent` invoice never reaches enrichment, so it has no
+categories and no summary. `1.pdf` is only `flagged` — warnings, no
+contradictions — so it was enriched normally.
+
+**The one genuine defect visible here is `7_scanned.pdf`'s currency.** Its
+amounts are all correct (707.90 / 141.58 / 849.48, identical to the digital
+twin), but the currency is stored as `EUR`. EasyOCR turned `£` into `€` on
+nearly every line of that scan — `€6.40`, `€141.58`, `€849.48` — so the model
+had overwhelming and consistent evidence for the wrong answer, and the `GB`
+VAT prefixes were not enough to outweigh it. `8.pdf` is a different scan of the
+same invoice where the corruption fell differently, and it resolves to `GBP`
+correctly. Nothing downstream can catch this: the arithmetic reconciles
+perfectly, because every figure is right and only the label is wrong.
 
 | File | Content | Branch |
 | --- | --- | --- |
