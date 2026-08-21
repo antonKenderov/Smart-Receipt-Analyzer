@@ -2,6 +2,7 @@ import hashlib
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import UUID
 from app.config import get_settings
 from app.db.models import LLMStage
 from app.db.repository import ReceiptRepository
@@ -47,7 +48,9 @@ def _without_enrichment(invoice: Invoice) -> EnrichedInvoice:
     )
 
 
-def _record_call(repo, receipt_id, stage: LLMStage, call: LLMCallRecord) -> None:
+def _record_call(
+    repo: ReceiptRepository, receipt_id: UUID, stage: LLMStage, call: LLMCallRecord
+) -> None:
     repo.add_llm_call(
         receipt_id,
         stage=stage,
@@ -59,8 +62,11 @@ def _record_call(repo, receipt_id, stage: LLMStage, call: LLMCallRecord) -> None
     )
 
 
-def process_invoice(pdf_path: Path | str) -> StoredReceipt:
+def process_invoice(
+    pdf_path: Path | str, *, source_filename: str | None = None
+) -> StoredReceipt:
     path = Path(pdf_path)
+    name = source_filename or path.name
     validate_pdf(path)
     digest = file_hash(path)
 
@@ -69,7 +75,7 @@ def process_invoice(pdf_path: Path | str) -> StoredReceipt:
 
         already = repo.get_by_file_hash(digest)
         if already is not None:
-            logger.info("'%s' already processed as %s", path.name, already.id)
+            logger.info("'%s' already processed as %s", name, already.id)
             return already
 
         extraction = extract_text(path)
@@ -79,7 +85,7 @@ def process_invoice(pdf_path: Path | str) -> StoredReceipt:
         if validation.has_errors:
             logger.warning(
                 "'%s' failed validation (%d error(s)); skipping enrichment",
-                path.name,
+                name,
                 len(validation.errors),
             )
             enriched, enrichment_call = _without_enrichment(invoice), None
@@ -90,7 +96,7 @@ def process_invoice(pdf_path: Path | str) -> StoredReceipt:
             enriched,
             extraction_method=extraction.method,
             validation=validation,
-            source_filename=path.name,
+            source_filename=name,
             file_hash=digest,
             processed_at=datetime.now(timezone.utc),
         )
