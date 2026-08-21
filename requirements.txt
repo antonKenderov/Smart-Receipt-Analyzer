@@ -1,3 +1,30 @@
-easyocr
-pdf2image
-pdfplumber
+# Direct dependencies only, all pinned. Versions are the ones the Docker
+# image was built and tested with; transitive packages resolve from these.
+
+# API
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
+
+# Domain & config
+pydantic==2.13.4
+pydantic-settings==2.15.0
+
+# Extraction: text layer first, OCR fallback
+pdfplumber==0.11.10
+pdfminer.six==20260107
+pdf2image==1.17.0
+easyocr==1.7.2
+numpy==2.5.2
+pillow==12.3.0
+
+# LLM
+litellm==1.97.0
+
+# Database
+sqlalchemy==2.0.52
+psycopg==3.3.4
+psycopg-binary==3.3.4
+
+# Reports
+reportlab==5.0.1
