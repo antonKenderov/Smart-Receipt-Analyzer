@@ -1,0 +1,3 @@
+# Test-only. Not installed in the image - the reviewer runs `docker
+# compose up`, not the test suite.
+pytest==9.1.1
